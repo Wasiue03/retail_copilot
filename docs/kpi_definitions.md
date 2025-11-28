@@ -1,0 +1,3 @@
+# KPI Definitions
+AOV: Average Order Value = Total Revenue / Number of Orders
+...

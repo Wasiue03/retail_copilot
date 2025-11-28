@@ -1,0 +1,3 @@
+# Product Policy
+Return window for unopened beverages: 14 days
+...

@@ -1,0 +1,3 @@
+# Marketing Calendar
+Summer campaign: June 1997 - focus: Beverages
+...
