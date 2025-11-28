@@ -1,25 +1,38 @@
-from rank_bm25 import BM25Okapi
-from .doc_loader import load_and_chunk_all
+import os
+import glob
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 class Retriever:
-    def __init__(self):
-        self.chunks = load_and_chunk_all()
-        self.corpus = [c["text"].split() for c in self.chunks]
-        self.bm25 = BM25Okapi(self.corpus)
+    def __init__(self, docs_dir="docs", top_k=3):
+        self.top_k = top_k
+        self.chunks = []
+        self.doc_texts = []
+        self.ids = []
 
-    def search(self, query, k=3):
-        tokens = query.split()
-        scores = self.bm25.get_scores(tokens)
+        self._load_docs(docs_dir)
+        self.vectorizer = TfidfVectorizer().fit(self.doc_texts)
+        self.doc_vectors = self.vectorizer.transform(self.doc_texts)
 
-        scored = list(zip(self.chunks, scores))
-        ranked = sorted(scored, key=lambda x: x[1], reverse=True)
+    def _load_docs(self, docs_dir):
+        for filepath in glob.glob(os.path.join(docs_dir, "*.md")):
+            with open(filepath, "r", encoding="utf-8") as f:
+                paragraphs = [p.strip() for p in f.read().split("\n\n") if p.strip()]
+                for idx, para in enumerate(paragraphs):
+                    chunk_id = f"{os.path.basename(filepath)}::chunk{idx}"
+                    self.ids.append(chunk_id)
+                    self.doc_texts.append(para)
+                    self.chunks.append({"id": chunk_id, "content": para, "source": filepath})
 
+    def search(self, query):
+        q_vec = self.vectorizer.transform([query])
+        sims = cosine_similarity(q_vec, self.doc_vectors)[0]
+        top_idx = sims.argsort()[::-1][:self.top_k]
         results = []
-        for chunk, score in ranked[:k]:
+        for i in top_idx:
             results.append({
-                "id": chunk["id"],
-                "text": chunk["text"],
-                "source": chunk["filename"],
-                "score": float(score)
+                "id": self.ids[i],
+                "content": self.doc_texts[i],
+                "score": float(sims[i])
             })
         return results

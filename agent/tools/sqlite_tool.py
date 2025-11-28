@@ -21,9 +21,13 @@ class SQLiteTool:
 
     def execute(self, sql):
         try:
-            cur = self.conn.execute(sql)
+            # Create a new connection for each execution
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cur = conn.execute(sql)
             rows = cur.fetchall()
             cols = [d[0] for d in cur.description] if cur.description else []
+            conn.close()  # close after use
             return {
                 "columns": cols,
                 "rows": [tuple(r) for r in rows],
@@ -31,3 +35,4 @@ class SQLiteTool:
             }
         except Exception as e:
             return {"columns": [], "rows": [], "error": str(e)}
+
